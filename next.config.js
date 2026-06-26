@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
   // Permite acesso ao servidor de dev de outras origens na rede local (VM / acesso remoto)
   allowedDevOrigins: [
     '172.16.0.0/12',   // range de IPs privados (VMs locais)

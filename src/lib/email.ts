@@ -162,6 +162,32 @@ export function buildCancellationEmail(session: SessionInfo): string {
   `);
 }
 
+export function buildReminderEmail(session: SessionInfo): string {
+  const date = new Date(session.startDatetime).toLocaleDateString('pt-BR', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  });
+  const timeStart = new Date(session.startDatetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const timeEnd = new Date(session.endDatetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  return emailLayout(`
+    <p>Este é um lembrete de que você tem uma sessão agendada para <strong>amanhã</strong>:</p>
+    <div class="card">
+      <div class="label">Paciente</div>
+      <div class="value">${session.patientName}</div>
+    </div>
+    <div class="card">
+      <div class="label">Profissional Responsável</div>
+      <div class="value">${session.professionalName}</div>
+    </div>
+    <div class="card">
+      <div class="label">Data e Horário</div>
+      <div class="value">${date}, ${timeStart} – ${timeEnd}</div>
+    </div>
+    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${session.roomName}</div></div>` : ''}
+    <p style="margin-top: 24px;">Para mais informações, entre em contato com a clínica.</p>
+  `);
+}
+
 export function buildInviteEmail(name: string, inviteLink: string, role: 'PROFESSIONAL' | 'ADMIN' | 'GUARDIAN' = 'PROFESSIONAL'): string {
   const roleLabel = role === 'ADMIN' ? 'Administrador' : role === 'GUARDIAN' ? 'Responsável' : 'Profissional';
 
