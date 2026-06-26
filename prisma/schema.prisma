@@ -1,0 +1,249 @@
+// Prisma Schema — Sistema de Gestão de Clínica ABA
+// Desenhado para single-tenant (1 clínica), pronto para multi-tenant via clinic_id
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// ENUM TYPES
+// ================================
+
+enum Role {
+  ADMIN
+  PROFESSIONAL
+  GUARDIAN
+}
+
+enum SessionStatus {
+  SCHEDULED
+  DONE
+  CANCELLED
+  RESCHEDULED
+}
+
+enum NotificationType {
+  CANCELLATION
+  RESCHEDULE
+  REMINDER
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  PENDING
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ================================
+// CORE MODELS
+// ================================
+
+model Clinic {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  email             String?
+  phone             String?
+  address           String?
+  notificationEmail String?
+  smtpHost          String?
+  smtpPort          Int      @default(587)
+  smtpUser          String?
+  smtpPass          String?
+  smtpSecure        Boolean  @default(false)
+  smtpFrom          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users         User[]
+  professionals Professional[]
+  patients      Patient[]
+  rooms         Room[]
+  sessions      Session[]
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String?   // Null until user activates via invite
+  name            String
+  role            Role      @default(PROFESSIONAL)
+  phone           String?
+  avatarUrl       String?
+  active          Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  inviteToken     String?   @unique
+  inviteExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+
+  professional Professional?
+  guardianOf   Guardian[]
+
+  @@index([clinicId])
+  @@index([email])
+  @@index([inviteToken])
+}
+
+model Professional {
+  id           String  @id @default(cuid())
+  specialty    String?
+  weeklyHours  Int     @default(40)
+  bio          String?
+  active       Boolean @default(true)
+
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String @unique
+
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+
+  availabilities ProfessionalAvailability[]
+  sessions       Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+}
+
+model ProfessionalAvailability {
+  id         String    @id @default(cuid())
+  dayOfWeek  DayOfWeek
+  startTime  String    // "HH:MM" format
+  endTime    String    // "HH:MM" format
+
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  professionalId String
+
+  @@unique([professionalId, dayOfWeek])
+  @@index([professionalId])
+}
+
+model Patient {
+  id            String    @id @default(cuid())
+  name          String
+  birthDate     DateTime?
+  treatmentPlan String?
+  active        Boolean   @default(true)
+  notes         String?
+
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+
+  guardians Guardian[]
+  sessions  Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+}
+
+model Guardian {
+  id           String @id @default(cuid())
+  relationship String @default("Responsável")
+
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([patientId, userId])
+  @@index([patientId])
+  @@index([userId])
+}
+
+model Room {
+  id       String  @id @default(cuid())
+  name     String
+  capacity Int     @default(1)
+  color    String? // hex color for calendar display
+  active   Boolean @default(true)
+
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+}
+
+model Session {
+  id            String        @id @default(cuid())
+  startDatetime DateTime
+  endDatetime   DateTime
+  status        SessionStatus @default(SCHEDULED)
+  notes         String?       // intercorrências
+  color         String?       // override color on calendar
+
+  // Recurrence — RRULE string (ex: "FREQ=WEEKLY;BYDAY=MO,WE;COUNT=20")
+  recurrenceRule String?
+  // For instances of a recurring series:
+  parentSessionId String?
+  parentSession   Session?  @relation("RecurrenceSeries", fields: [parentSessionId], references: [id])
+  childSessions   Session[] @relation("RecurrenceSeries")
+
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId String
+
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  professionalId String
+
+  room   Room?   @relation(fields: [roomId], references: [id])
+  roomId String?
+
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+  @@index([professionalId])
+  @@index([patientId])
+  @@index([startDatetime])
+  @@index([parentSessionId])
+}
+
+model Notification {
+  id         String             @id @default(cuid())
+  type       NotificationType
+  status     NotificationStatus @default(PENDING)
+  recipients Json               // array of { email, name, role }
+  subject    String
+  body       String
+  sentAt     DateTime?
+  error      String?
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
