@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
 
 export async function GET(_: NextRequest, { params }: { params: { token: string } }) {
   const user = await prisma.user.findFirst({
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await hashPassword(password);
 
   await prisma.user.update({
     where: { id: user.id },

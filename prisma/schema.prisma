@@ -87,6 +87,7 @@ model User {
   avatarUrl       String?
   active          Boolean   @default(true)
   emailVerified   Boolean   @default(false)
+  mustChangePassword Boolean @default(false)
   inviteToken     String?   @unique
   inviteExpiresAt DateTime?
   createdAt       DateTime  @default(now())

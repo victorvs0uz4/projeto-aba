@@ -16,6 +16,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Troca de senha/e-mail obrigatória no primeiro login
+  if (token.mustChangePassword && pathname !== '/primeiro-acesso') {
+    return NextResponse.redirect(new URL('/primeiro-acesso', req.url));
+  }
+
   // Rotas exclusivas do Admin
   const adminRoutes = [
     '/dashboard/profissionais',

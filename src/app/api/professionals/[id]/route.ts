@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth, notFound, ok } from '@/lib/api-helpers';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   await prisma.$transaction(async (tx) => {
     const userUpdate: Record<string, unknown> = { name, email, phone, active };
-    if (password) userUpdate.passwordHash = await bcrypt.hash(password, 12);
+    if (password) userUpdate.passwordHash = await hashPassword(password);
 
     await tx.user.update({ where: { id: professional.userId }, data: userUpdate });
     await tx.professional.update({

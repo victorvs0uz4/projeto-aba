@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuth, getAdminAuth, badRequest, ok, created } from '@/lib/api-helpers';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
 
 export async function GET() {
   const { session, error } = await getAuth();
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         let user = await tx.user.findUnique({ where: { email: g.email } });
 
         if (!user) {
-          const hash = await bcrypt.hash(g.password || 'Acesso@1234', 12);
+          const hash = await hashPassword(g.password || 'Acesso@1234');
           user = await tx.user.create({
             data: {
               name: g.name,

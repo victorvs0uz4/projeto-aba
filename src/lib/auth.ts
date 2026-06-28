@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { compare } from 'bcryptjs';
+import { verifyPassword } from './password';
 import { prisma } from './prisma';
 
 declare module 'next-auth' {
@@ -12,6 +12,7 @@ declare module 'next-auth' {
       role: string;
       clinicId: string;
       professionalId?: string;
+      mustChangePassword: boolean;
     };
   }
   interface User {
@@ -21,6 +22,7 @@ declare module 'next-auth' {
     role: string;
     clinicId: string;
     professionalId?: string;
+    mustChangePassword: boolean;
   }
 }
 
@@ -30,6 +32,7 @@ declare module 'next-auth/jwt' {
     role: string;
     clinicId: string;
     professionalId?: string;
+    mustChangePassword: boolean;
   }
 }
 
@@ -69,7 +72,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Conta pendente de ativação. Verifique seu e-mail para definir sua senha de acesso.');
         }
 
-        const isValid = await compare(credentials.password, user.passwordHash);
+        const isValid = await verifyPassword(user.passwordHash, credentials.password);
         if (!isValid) {
           throw new Error('E-mail ou senha incorretos.');
         }
@@ -81,6 +84,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           clinicId: user.clinicId,
           professionalId: user.professional?.id,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -92,6 +96,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.clinicId = user.clinicId;
         token.professionalId = user.professionalId;
+        token.mustChangePassword = user.mustChangePassword;
       }
       return token;
     },
@@ -100,6 +105,7 @@ export const authOptions: NextAuthOptions = {
       session.user.role = token.role;
       session.user.clinicId = token.clinicId;
       session.user.professionalId = token.professionalId;
+      session.user.mustChangePassword = token.mustChangePassword;
       return session;
     },
   },
