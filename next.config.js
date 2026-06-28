@@ -4,6 +4,7 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     instrumentationHook: true,
+    serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
   // Permite acesso ao servidor de dev de outras origens na rede local (VM / acesso remoto)
   allowedDevOrigins: [
