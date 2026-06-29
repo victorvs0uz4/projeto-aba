@@ -1,5 +1,5 @@
 import { PrismaClient, Role } from '@prisma/client';
-import { hashPassword } from '../src/lib/password';
+import { hash } from '@node-rs/argon2';
 
 const prisma = new PrismaClient();
 
@@ -24,7 +24,7 @@ async function main() {
 
   console.log(`✅ Clínica criada: ${clinic.name}`);
 
-  const adminHash = await hashPassword('1234@mudar');
+  const adminHash = await hash('1234@mudar');
   const admin = await prisma.user.upsert({
     where: { email: 'admin@trocar.local' },
     update: {},
