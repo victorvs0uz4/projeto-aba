@@ -88,6 +88,15 @@ export async function sendEmail({ to, subject, html, clinicId }: SendEmailOption
 // Email Templates
 // ============================================================
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function emailLayout(content: string): string {
   return `
   <!DOCTYPE html>
@@ -146,18 +155,18 @@ export function buildCancellationEmail(session: SessionInfo): string {
     <p>Informamos que a seguinte sessão foi <span class="badge badge-cancelled">Cancelada</span>:</p>
     <div class="card">
       <div class="label">Paciente</div>
-      <div class="value">${session.patientName}</div>
+      <div class="value">${escapeHtml(session.patientName)}</div>
     </div>
     <div class="card">
       <div class="label">Profissional Responsável</div>
-      <div class="value">${session.professionalName}</div>
+      <div class="value">${escapeHtml(session.professionalName)}</div>
     </div>
     <div class="card">
       <div class="label">Data e Horário</div>
       <div class="value">${date}, ${timeStart} – ${timeEnd}</div>
     </div>
-    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${session.roomName}</div></div>` : ''}
-    ${session.notes ? `<div class="card"><div class="label">Observação</div><div class="value">${session.notes}</div></div>` : ''}
+    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${escapeHtml(session.roomName)}</div></div>` : ''}
+    ${session.notes ? `<div class="card"><div class="label">Observação</div><div class="value">${escapeHtml(session.notes)}</div></div>` : ''}
     <p style="margin-top: 24px;">Para mais informações, entre em contato com a clínica.</p>
   `);
 }
@@ -173,17 +182,17 @@ export function buildReminderEmail(session: SessionInfo): string {
     <p>Este é um lembrete de que você tem uma sessão agendada para <strong>amanhã</strong>:</p>
     <div class="card">
       <div class="label">Paciente</div>
-      <div class="value">${session.patientName}</div>
+      <div class="value">${escapeHtml(session.patientName)}</div>
     </div>
     <div class="card">
       <div class="label">Profissional Responsável</div>
-      <div class="value">${session.professionalName}</div>
+      <div class="value">${escapeHtml(session.professionalName)}</div>
     </div>
     <div class="card">
       <div class="label">Data e Horário</div>
       <div class="value">${date}, ${timeStart} – ${timeEnd}</div>
     </div>
-    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${session.roomName}</div></div>` : ''}
+    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${escapeHtml(session.roomName)}</div></div>` : ''}
     <p style="margin-top: 24px;">Para mais informações, entre em contato com a clínica.</p>
   `);
 }
@@ -192,7 +201,7 @@ export function buildInviteEmail(name: string, inviteLink: string, role: 'PROFES
   const roleLabel = role === 'ADMIN' ? 'Administrador' : role === 'GUARDIAN' ? 'Responsável' : 'Profissional';
 
   return emailLayout(`
-    <p>Olá, <strong>${name}</strong>!</p>
+    <p>Olá, <strong>${escapeHtml(name)}</strong>!</p>
     <p>Você foi cadastrado(a) no sistema de gestão da <strong>Clínica ABA</strong> como <strong>${roleLabel}</strong>.</p>
     <p>Para ativar sua conta e definir sua senha de acesso, clique no botão abaixo:</p>
     <div style="text-align: center; margin: 32px 0;">
@@ -211,7 +220,7 @@ export function buildInviteEmail(name: string, inviteLink: string, role: 'PROFES
 
 export function buildForgotPasswordEmail(name: string, resetLink: string): string {
   return emailLayout(`
-    <p>Olá, <strong>${name}</strong>!</p>
+    <p>Olá, <strong>${escapeHtml(name)}</strong>!</p>
     <p>Recebemos uma solicitação para redefinir a senha da sua conta no sistema de gestão da <strong>Clínica ABA</strong>.</p>
     <p>Para criar uma nova senha, clique no botão abaixo:</p>
     <div style="text-align: center; margin: 32px 0;">
@@ -238,17 +247,17 @@ export function buildRescheduleEmail(session: SessionInfo): string {
     <p>Informamos que a seguinte sessão foi <span class="badge badge-rescheduled">Remarcada</span>:</p>
     <div class="card">
       <div class="label">Paciente</div>
-      <div class="value">${session.patientName}</div>
+      <div class="value">${escapeHtml(session.patientName)}</div>
     </div>
     <div class="card">
       <div class="label">Profissional Responsável</div>
-      <div class="value">${session.professionalName}</div>
+      <div class="value">${escapeHtml(session.professionalName)}</div>
     </div>
     <div class="card">
       <div class="label">Novo Horário</div>
       <div class="value">${date}, ${timeStart} – ${timeEnd}</div>
     </div>
-    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${session.roomName}</div></div>` : ''}
+    ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${escapeHtml(session.roomName)}</div></div>` : ''}
     <p style="margin-top: 24px;">Para mais informações, entre em contato com a clínica.</p>
   `);
 }
