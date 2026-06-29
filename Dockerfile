@@ -42,7 +42,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Next.js standalone output só traz o que o servidor precisa em runtime;
 # o CLI do Prisma (usado para rodar as migrations no entrypoint) precisa ser copiado à parte.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Não copiamos node_modules/.bin/prisma: é um symlink que o Docker "achata",
+# perdendo os arquivos .wasm que ficam ao lado do script real em prisma/build/.
+# O entrypoint chama node_modules/prisma/build/index.js diretamente.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
