@@ -74,7 +74,17 @@ export default function LoginPage() {
           </div>
 
           <div className="input-group">
-            <label htmlFor="password" className="label">Senha</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="label">Senha</label>
+              <button
+                type="button"
+                className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                onClick={() => router.push('/forgot-password')}
+                tabIndex={-1}
+              >
+                Esqueci minha senha
+              </button>
+            </div>
             <div className="relative">
               <input
                 id="password"

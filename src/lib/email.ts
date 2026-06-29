@@ -209,6 +209,24 @@ export function buildInviteEmail(name: string, inviteLink: string, role: 'PROFES
   `);
 }
 
+export function buildForgotPasswordEmail(name: string, resetLink: string): string {
+  return emailLayout(`
+    <p>Olá, <strong>${name}</strong>!</p>
+    <p>Recebemos uma solicitação para redefinir a senha da sua conta no sistema de gestão da <strong>Clínica ABA</strong>.</p>
+    <p>Para criar uma nova senha, clique no botão abaixo:</p>
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${resetLink}"
+        style="display: inline-block; background: linear-gradient(135deg, #0369a1, #14b8a6); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-size: 16px; font-weight: 700; letter-spacing: 0.02em;">
+        🔑 Redefinir minha senha
+      </a>
+    </div>
+    <div class="card">
+      <div class="label">⚠️ Atenção</div>
+      <div class="value" style="font-size: 14px; font-weight: 400; color: #374151;">Este link é válido por <strong>1 hora</strong>. Se você não solicitou essa redefinição, ignore este e-mail — sua senha permanecerá inalterada.</div>
+    </div>
+  `);
+}
+
 export function buildRescheduleEmail(session: SessionInfo): string {
   const date = new Date(session.startDatetime).toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',

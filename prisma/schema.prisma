@@ -91,6 +91,8 @@ model User {
   mustChangePassword Boolean @default(false)
   inviteToken     String?   @unique
   inviteExpiresAt DateTime?
+  resetPasswordToken     String?   @unique
+  resetPasswordExpiresAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -103,6 +105,7 @@ model User {
   @@index([clinicId])
   @@index([email])
   @@index([inviteToken])
+  @@index([resetPasswordToken])
 }
 
 model Professional {
