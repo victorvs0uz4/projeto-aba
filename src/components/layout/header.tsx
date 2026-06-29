@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut } from 'next-auth/react';
+import Link from 'next/link';
 import { LogOut, User, Bell } from 'lucide-react';
 import { getInitials, getRoleLabel } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,14 @@ export function Header({ user }: HeaderProps) {
                   <p className="text-xs text-surface-muted truncate">{user.email}</p>
                 </div>
                 <div className="py-1">
+                  <Link
+                    href="/dashboard/minha-conta"
+                    className={cn('btn-ghost w-full justify-start px-4 py-2.5 rounded-none')}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    Minha Conta
+                  </Link>
                   <button
                     className={cn('btn-ghost w-full justify-start px-4 py-2.5 rounded-none text-red-400 hover:text-red-300 hover:bg-red-500/5')}
                     onClick={() => signOut({ callbackUrl: '/login' })}
