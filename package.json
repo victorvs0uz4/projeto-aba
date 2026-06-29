@@ -10,12 +10,12 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "node node_modules/tsx/dist/cli.mjs prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:fix-users": "tsx prisma/fix-existing-users.ts"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node node_modules/tsx/dist/cli.mjs prisma/seed.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",

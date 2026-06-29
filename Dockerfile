@@ -26,7 +26,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl libc6-compat
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -52,6 +52,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 # Mesmo motivo: @node-rs/argon2 é um binário nativo (napi-rs) externalizado do
 # bundle do webpack (ver next.config.js) e precisa ser copiado manualmente.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@node-rs ./node_modules/@node-rs
+
+# `prisma db seed` (rodado manualmente após o deploy) executa o comando
+# definido em package.json#prisma.seed ("tsx prisma/seed.ts"), então o tsx
+# (e o esbuild que ele usa por baixo) também precisa estar na imagem final.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/esbuild ./node_modules/esbuild
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@esbuild ./node_modules/@esbuild
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
 COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
