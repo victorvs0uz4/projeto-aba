@@ -2,7 +2,8 @@
 // Desenhado para single-tenant (1 clínica), pronto para multi-tenant via clinic_id
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
