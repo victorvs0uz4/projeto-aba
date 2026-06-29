@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { sendEmail, buildForgotPasswordEmail } from '@/lib/email';
+import { checkRateLimit, ipFromHeaders } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const { allowed, retryAfterMs } = checkRateLimit(
+    `forgot:${ipFromHeaders(req.headers)}`,
+    5,
+    15 * 60 * 1000,
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) } },
+    );
+  }
+
   const { email } = await req.json();
 
   if (!email) {

@@ -9,6 +9,9 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
   }
+  if (!session.user.mustChangePassword) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 });
+  }
 
   const { email, password } = await req.json();
 

@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './password';
 import { prisma } from './prisma';
+import { checkRateLimit, ipFromHeaders } from './rate-limit';
 
 declare module 'next-auth' {
   interface Session {
@@ -44,7 +45,16 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'E-mail', type: 'email' },
         password: { label: 'Senha', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
+        const { allowed } = checkRateLimit(
+          `login:${ipFromHeaders(req?.headers as Record<string, string | string[]>)}`,
+          10,
+          15 * 60 * 1000,
+        );
+        if (!allowed) {
+          throw new Error('Muitas tentativas de login. Aguarde 15 minutos e tente novamente.');
+        }
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error('E-mail e senha são obrigatórios.');
         }
