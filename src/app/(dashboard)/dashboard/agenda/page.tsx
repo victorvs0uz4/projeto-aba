@@ -177,7 +177,7 @@ export default function AgendaPage() {
         <div>
           <h1 className="page-title">Agenda</h1>
           <p className="page-subtitle">
-            {loading ? 'Carregando...' : `${events.length} sessão${events.length !== 1 ? 'ões' : ''} no período`}
+            {loading ? 'Carregando...' : `${events.length} ${events.length !== 1 ? 'sessões' : 'sessão'} no período`}
           </p>
         </div>
         {canCreate && (
