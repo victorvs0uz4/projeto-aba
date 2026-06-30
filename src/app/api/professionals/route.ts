@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
     return badRequest('Nome e e-mail são obrigatórios.');
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({
+    where: { email_clinicId: { email, clinicId: session.user.clinicId } },
+  });
   if (existing) {
     return conflict('Já existe um usuário com este e-mail.');
   }

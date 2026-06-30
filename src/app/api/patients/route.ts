@@ -56,7 +56,9 @@ export async function POST(req: NextRequest) {
 
     if (guardians?.length) {
       for (const g of guardians) {
-        let user = await tx.user.findUnique({ where: { email: g.email } });
+        let user = await tx.user.findUnique({
+          where: { email_clinicId: { email: g.email, clinicId: session.user.clinicId } },
+        });
 
         if (!user) {
           const inviteToken = randomBytes(32).toString('hex');

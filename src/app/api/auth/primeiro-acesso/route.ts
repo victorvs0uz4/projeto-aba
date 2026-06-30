@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'A senha deve ter pelo menos 8 caracteres.' }, { status: 400 });
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({
+    where: { email_clinicId: { email, clinicId: session.user.clinicId } },
+  });
   if (existing && existing.id !== session.user.id) {
     return NextResponse.json({ error: 'Este e-mail já está em uso por outra conta.' }, { status: 409 });
   }

@@ -1,5 +1,4 @@
-// Prisma Schema — Sistema de Gestão de Clínica ABA
-// Desenhado para single-tenant (1 clínica), pronto para multi-tenant via clinic_id
+// Prisma Schema — Sistema de Gestão de Clínica ABA (branch: saas / multi-tenant)
 
 generator client {
   provider      = "prisma-client-js"
@@ -80,7 +79,7 @@ model Clinic {
 
 model User {
   id              String    @id @default(cuid())
-  email           String    @unique
+  email           String
   passwordHash    String?   // Null until user activates via invite
   name            String
   role            Role      @default(PROFESSIONAL)
@@ -102,8 +101,8 @@ model User {
   professional Professional?
   guardianOf   Guardian[]
 
+  @@unique([email, clinicId])
   @@index([clinicId])
-  @@index([email])
   @@index([inviteToken])
   @@index([resetPasswordToken])
 }

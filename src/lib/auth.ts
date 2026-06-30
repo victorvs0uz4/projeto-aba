@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { verifyPassword } from './password';
 import { prisma } from './prisma';
 import { checkRateLimit, ipFromHeaders } from './rate-limit';
+import { TENANT_HEADER } from './tenant';
 
 declare module 'next-auth' {
   interface Session {
@@ -59,8 +60,22 @@ export const authOptions: NextAuthOptions = {
           throw new Error('E-mail e senha são obrigatórios.');
         }
 
+        // Resolve the clinic from the tenant header injected by the middleware.
+        // Falls back to CLINIC_SLUG env var for local development without subdomains.
+        const rawSlug = (req?.headers as Record<string, string | string[] | undefined>)?.[TENANT_HEADER];
+        const clinicSlug = (Array.isArray(rawSlug) ? rawSlug[0] : rawSlug) ?? process.env.CLINIC_SLUG;
+
+        if (!clinicSlug) {
+          throw new Error('Clínica não identificada. Acesse pelo endereço correto.');
+        }
+
+        const clinic = await prisma.clinic.findUnique({ where: { slug: clinicSlug } });
+        if (!clinic) {
+          throw new Error('Clínica não encontrada.');
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email_clinicId: { email: credentials.email, clinicId: clinic.id } },
           include: {
             professional: { select: { id: true } },
           },

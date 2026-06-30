@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { sendEmail, buildForgotPasswordEmail } from '@/lib/email';
 import { checkRateLimit, ipFromHeaders } from '@/lib/rate-limit';
+import { getCurrentClinic } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
   const { allowed, retryAfterMs } = checkRateLimit(
@@ -23,10 +24,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Informe o e-mail.' }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, name: true, email: true, active: true, clinicId: true },
-  });
+  const clinic = await getCurrentClinic();
+
+  const user = clinic
+    ? await prisma.user.findUnique({
+        where: { email_clinicId: { email, clinicId: clinic.id } },
+        select: { id: true, name: true, email: true, active: true, clinicId: true },
+      })
+    : null;
 
   // Resposta genérica independente do e-mail existir, para não expor quais contas existem.
   if (user && user.active) {

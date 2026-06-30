@@ -30,7 +30,9 @@ export async function PATCH(req: NextRequest) {
     return badRequest('O novo e-mail deve ser diferente do atual.');
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({
+    where: { email_clinicId: { email, clinicId: session.user.clinicId } },
+  });
   if (existing) {
     return conflict('Este e-mail já está em uso por outra conta.');
   }
