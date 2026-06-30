@@ -14,7 +14,8 @@ export function slugFromHostname(hostname: string): string | null {
   if (parts.length < 2) return null;
 
   const slug = parts[0];
-  if (['www', 'app', 'localhost'].includes(slug)) return null;
+  // 'gestao' is the super-admin subdomain, not a clinic slug
+  if (['www', 'app', 'localhost', 'gestao'].includes(slug)) return null;
 
   return slug;
 }

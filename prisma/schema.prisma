@@ -49,6 +49,11 @@ enum DayOfWeek {
   SUNDAY
 }
 
+enum ClinicStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 // ================================
 // CORE MODELS
 // ================================
@@ -63,27 +68,47 @@ model SuperAdmin {
 }
 
 model Clinic {
-  id                String   @id @default(cuid())
+  id                String       @id @default(cuid())
   name              String
-  slug              String   @unique
+  slug              String       @unique
   email             String?
   phone             String?
   address           String?
+  cnpj              String?
+  status            ClinicStatus @default(ACTIVE)
+  suspendedAt       DateTime?
+  suspendedBy       String?      // SuperAdmin email
+  suspendReason     String?
+  reactivatedAt     DateTime?
   notificationEmail String?
   smtpHost          String?
-  smtpPort          Int      @default(587)
+  smtpPort          Int          @default(587)
   smtpUser          String?
   smtpPass          String?
-  smtpSecure        Boolean  @default(false)
+  smtpSecure        Boolean      @default(false)
   smtpFrom          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  users         User[]
-  professionals Professional[]
-  patients      Patient[]
-  rooms         Room[]
-  sessions      Session[]
+  users            User[]
+  professionals    Professional[]
+  patients         Patient[]
+  rooms            Room[]
+  sessions         Session[]
+  statusHistory    ClinicStatusHistory[]
+}
+
+model ClinicStatusHistory {
+  id          String   @id @default(cuid())
+  clinicId    String
+  action      String   // "SUSPENDED" | "REACTIVATED"
+  reason      String?
+  performedBy String   // SuperAdmin email
+  performedAt DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
 }
 
 model User {

@@ -74,6 +74,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Clínica não encontrada.');
         }
 
+        if (clinic.status === 'SUSPENDED') {
+          throw new Error('Acesso suspenso. Entre em contato com o administrador do sistema para regularizar sua situação.');
+        }
+
         const user = await prisma.user.findUnique({
           where: { email_clinicId: { email: credentials.email, clinicId: clinic.id } },
           include: {
