@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
+import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getAuth, getAdminAuth, badRequest, ok, created } from '@/lib/api-helpers';
-import { hashPassword } from '@/lib/password';
+import { sendEmail, buildInviteEmail } from '@/lib/email';
 
 export async function GET() {
   const { session, error } = await getAuth();
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
 
   if (!name) return badRequest('Nome é obrigatório.');
 
+  const newGuardians: { name: string; email: string; inviteToken: string }[] = [];
+
   const patient = await prisma.$transaction(async (tx) => {
     const p = await tx.patient.create({
       data: {
@@ -56,17 +59,24 @@ export async function POST(req: NextRequest) {
         let user = await tx.user.findUnique({ where: { email: g.email } });
 
         if (!user) {
-          const hash = await hashPassword(g.password || 'Acesso@1234');
+          const inviteToken = randomBytes(32).toString('hex');
+          const inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
           user = await tx.user.create({
             data: {
               name: g.name,
               email: g.email,
               phone: g.phone,
-              passwordHash: hash,
+              passwordHash: null,
+              emailVerified: false,
+              inviteToken,
+              inviteExpiresAt,
               role: 'GUARDIAN',
               clinicId: session.user.clinicId,
             },
           });
+
+          newGuardians.push({ name: g.name, email: g.email, inviteToken });
         }
 
         await tx.guardian.create({
@@ -77,6 +87,17 @@ export async function POST(req: NextRequest) {
 
     return p;
   });
+
+  for (const guardian of newGuardians) {
+    const inviteLink = `${process.env.NEXTAUTH_URL}/set-password/${guardian.inviteToken}`;
+    const html = buildInviteEmail(guardian.name, inviteLink, 'GUARDIAN');
+    sendEmail({
+      to: [{ name: guardian.name, email: guardian.email }],
+      subject: 'Bem-vindo(a) à Clínica ABA — Ative sua conta',
+      html,
+      clinicId: session.user.clinicId,
+    }).catch(console.error);
+  }
 
   return created(patient);
 }
