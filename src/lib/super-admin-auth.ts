@@ -2,8 +2,9 @@ import { cookies } from 'next/headers';
 import { encode, decode, type JWT } from 'next-auth/jwt';
 import { prisma } from './prisma';
 import { verifyPassword } from './password';
+import { SUPER_ADMIN_COOKIE } from './super-admin-cookie';
 
-export const SUPER_ADMIN_COOKIE = 'super-admin-session';
+export { SUPER_ADMIN_COOKIE };
 const MAX_AGE = 8 * 60 * 60; // 8 hours
 
 interface SuperAdminPayload {

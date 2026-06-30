@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken, decode } from 'next-auth/jwt';
 import { slugFromHostname, TENANT_HEADER } from '@/lib/tenant';
-import { SUPER_ADMIN_COOKIE } from '@/lib/super-admin-auth';
+import { SUPER_ADMIN_COOKIE } from '@/lib/super-admin-cookie';
 
 const SUPER_ADMIN_PUBLIC_PATHS = ['/super-admin/login', '/api/super-admin/login'];
 

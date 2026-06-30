@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import NewClinicForm from './new-clinic-form';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SuperAdminPage() {
   const clinics = await prisma.clinic.findMany({
     select: {
