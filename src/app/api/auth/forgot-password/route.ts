@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
       data: { resetPasswordToken, resetPasswordExpiresAt },
     });
 
-    const resetLink = `${process.env.NEXTAUTH_URL}/reset-password/${resetPasswordToken}`;
+    const appDomain = process.env.APP_DOMAIN;
+    const resetLink = appDomain && clinic
+      ? `https://${clinic.slug}.${appDomain}/reset-password/${resetPasswordToken}`
+      : `${process.env.NEXTAUTH_URL}/reset-password/${resetPasswordToken}`;
     const html = buildForgotPasswordEmail(user.name, resetLink);
 
     await sendEmail({
