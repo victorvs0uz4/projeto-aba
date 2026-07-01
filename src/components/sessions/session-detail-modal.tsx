@@ -19,12 +19,13 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   async function updateStatus(status: string) {
+    if (status === 'DONE' && !notes.trim()) return;
     setUpdatingStatus(true);
     try {
       const res = await fetch(`/api/sessions/${session.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(status === 'DONE' ? { status, notes } : { status }),
       });
       if (res.ok) { onUpdated(); onClose(); }
     } finally { setUpdatingStatus(false); }
@@ -87,15 +88,21 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
         {canEdit && (
           <div className="mb-6">
             <label className="label flex items-center gap-2">
-              <FileText className="w-4 h-4" /> Intercorrências / Observações
+              <FileText className="w-4 h-4" /> Observações da Sessão
+              {session.resource.status === 'SCHEDULED' && (
+                <span className="text-xs text-surface-muted font-normal">(obrigatório para confirmar)</span>
+              )}
             </label>
             <textarea
               className="input"
-              rows={4}
+              rows={6}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Registre intercorrências ou observações desta sessão..."
+              placeholder="Descreva como foi a sessão: evolução do paciente, atividades realizadas, comportamento observado, intercorrências..."
             />
+            <div className="flex items-center justify-end mt-1">
+              <span className="text-xs text-surface-muted">{notes.length} caracteres</span>
+            </div>
             <button
               className="btn-secondary btn-sm mt-2"
               onClick={saveNotes}
@@ -121,6 +128,7 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
           today.setHours(0, 0, 0, 0);
           const isFuture = sessionDay > today;
           const canMarkDone = canAdmin || !isFuture;
+          const missingNotes = !notes.trim();
 
           return (
             <div className="pt-2 border-t border-surface-border">
@@ -128,8 +136,14 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
                 <button
                   className="btn-sm btn-secondary flex items-center gap-2"
                   onClick={() => updateStatus('DONE')}
-                  disabled={updatingStatus || !canMarkDone}
-                  title={!canMarkDone ? 'Apenas sessões do dia atual ou anteriores podem ser confirmadas' : ''}
+                  disabled={updatingStatus || !canMarkDone || missingNotes}
+                  title={
+                    !canMarkDone
+                      ? 'Apenas sessões do dia atual ou anteriores podem ser confirmadas'
+                      : missingNotes
+                        ? 'Registre uma observação para confirmar o atendimento'
+                        : ''
+                  }
                 >
                   <CheckCircle className="w-4 h-4 text-green-400" /> Marcar como Realizada
                 </button>
@@ -150,6 +164,12 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
                 <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   Sessões futuras só podem ser confirmadas no dia do atendimento.
+                </p>
+              )}
+              {canMarkDone && missingNotes && (
+                <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                  <FileText className="w-3 h-3" />
+                  Registre uma observação acima para poder confirmar o atendimento.
                 </p>
               )}
             </div>

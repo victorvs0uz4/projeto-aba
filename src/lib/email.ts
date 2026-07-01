@@ -142,6 +142,7 @@ interface SessionInfo {
   endDatetime: Date;
   roomName?: string;
   notes?: string;
+  cancelledByName?: string;
 }
 
 export function buildCancellationEmail(session: SessionInfo): string {
@@ -166,6 +167,7 @@ export function buildCancellationEmail(session: SessionInfo): string {
       <div class="value">${date}, ${timeStart} – ${timeEnd}</div>
     </div>
     ${session.roomName ? `<div class="card"><div class="label">Sala</div><div class="value">${escapeHtml(session.roomName)}</div></div>` : ''}
+    ${session.cancelledByName ? `<div class="card"><div class="label">Cancelado por</div><div class="value">${escapeHtml(session.cancelledByName)}</div></div>` : ''}
     ${session.notes ? `<div class="card"><div class="label">Observação</div><div class="value">${escapeHtml(session.notes)}</div></div>` : ''}
     <p style="margin-top: 24px;">Para mais informações, entre em contato com a clínica.</p>
   `);

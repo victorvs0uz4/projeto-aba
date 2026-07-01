@@ -52,6 +52,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   }
 
+  if (status === 'DONE') {
+    const resultingNotes = notes !== undefined ? notes : existing.notes;
+    if (!resultingNotes || !resultingNotes.trim()) {
+      return badRequest('É obrigatório registrar uma observação para confirmar o atendimento.');
+    }
+  }
+
   const start = new Date(startDatetime ?? existing.startDatetime);
   const end = new Date(endDatetime ?? existing.endDatetime);
 
@@ -94,15 +101,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const newStatus = status ?? existing.status;
 
   if (newStatus !== prevStatus) {
-    const sessionInfo = {
-      patientName: updated.patient.name,
-      professionalName: updated.professional.user.name,
-      startDatetime: updated.startDatetime,
-      endDatetime: updated.endDatetime,
-      roomName: updated.room?.name,
-      notes: updated.notes ?? undefined,
-    };
-
     const guardianEmails = existing.patient.guardians.map(g => ({ name: g.user.name, email: g.user.email }));
     const professionalEmail = { name: existing.professional.user.name, email: existing.professional.user.email };
     const allRecipients = [professionalEmail, ...guardianEmails];
@@ -117,16 +115,44 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     if (newStatus === 'CANCELLED') {
-      const html = buildCancellationEmail(sessionInfo);
-      sendEmail({ to: allRecipients, subject: `Sessão Cancelada — ${updated.patient.name}`, html, clinicId: existing.clinicId }).catch(console.error);
+      // Quando é o próprio profissional quem cancela, apenas a clínica é notificada —
+      // os responsáveis só recebem e-mail de cancelamentos feitos pela administração.
+      const cancelledByProfessional = session.user.role === 'PROFESSIONAL';
+      const recipients = cancelledByProfessional
+        ? allRecipients.filter(r => clinicNotificationEmail && r.email === clinicNotificationEmail)
+        : allRecipients;
 
-      await prisma.notification.create({
-        data: {
-          sessionId: params.id, type: 'CANCELLATION', status: 'PENDING',
-          recipients: allRecipients, subject: `Sessão Cancelada — ${updated.patient.name}`, body: html,
-        },
-      });
+      const sessionInfo = {
+        patientName: updated.patient.name,
+        professionalName: updated.professional.user.name,
+        startDatetime: updated.startDatetime,
+        endDatetime: updated.endDatetime,
+        roomName: updated.room?.name,
+        notes: updated.notes ?? undefined,
+        cancelledByName: cancelledByProfessional ? existing.professional.user.name : undefined,
+      };
+
+      if (recipients.length > 0) {
+        const html = buildCancellationEmail(sessionInfo);
+        sendEmail({ to: recipients, subject: `Sessão Cancelada — ${updated.patient.name}`, html, clinicId: existing.clinicId }).catch(console.error);
+
+        await prisma.notification.create({
+          data: {
+            sessionId: params.id, type: 'CANCELLATION', status: 'PENDING',
+            recipients, subject: `Sessão Cancelada — ${updated.patient.name}`, body: html,
+          },
+        });
+      }
     } else if (newStatus === 'RESCHEDULED') {
+      const sessionInfo = {
+        patientName: updated.patient.name,
+        professionalName: updated.professional.user.name,
+        startDatetime: updated.startDatetime,
+        endDatetime: updated.endDatetime,
+        roomName: updated.room?.name,
+        notes: updated.notes ?? undefined,
+      };
+
       const html = buildRescheduleEmail(sessionInfo);
       sendEmail({ to: allRecipients, subject: `Sessão Remarcada — ${updated.patient.name}`, html, clinicId: existing.clinicId }).catch(console.error);
 
