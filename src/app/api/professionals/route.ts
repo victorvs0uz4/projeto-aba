@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     if (availabilities?.length) {
       await tx.professionalAvailability.createMany({
-        data: availabilities.map((a: any) => ({
+        data: availabilities.map((a: { dayOfWeek: number; startTime: string; endTime: string }) => ({
           professionalId: professional.id,
           dayOfWeek: a.dayOfWeek,
           startTime: a.startTime,
@@ -79,7 +79,9 @@ export async function POST(req: NextRequest) {
     return { user, professional };
   });
 
-  const inviteLink = `${process.env.NEXTAUTH_URL}/set-password/${inviteToken}`;
+  const host = req.headers.get('host') ?? '';
+  const proto = req.headers.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'production' ? 'https' : 'http');
+  const inviteLink = `${proto}://${host}/set-password/${inviteToken}`;
   const html = buildInviteEmail(name, inviteLink, 'PROFESSIONAL');
   sendEmail({
     to: [{ name, email }],

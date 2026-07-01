@@ -4,7 +4,7 @@ import { getAdminAuth, notFound, conflict, ok } from '@/lib/api-helpers';
 import { sendEmail, buildInviteEmail } from '@/lib/email';
 import { randomBytes } from 'crypto';
 
-export async function POST(_: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const { session, error } = await getAdminAuth();
   if (error) return error;
 
@@ -27,7 +27,9 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
     data: { inviteToken, inviteExpiresAt },
   });
 
-  const inviteLink = `${process.env.NEXTAUTH_URL}/set-password/${inviteToken}`;
+  const host = req.headers.get('host') ?? '';
+  const proto = req.headers.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'production' ? 'https' : 'http');
+  const inviteLink = `${proto}://${host}/set-password/${inviteToken}`;
   const html = buildInviteEmail(professional.user.name, inviteLink, 'PROFESSIONAL');
 
   await sendEmail({
