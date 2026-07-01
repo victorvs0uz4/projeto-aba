@@ -65,7 +65,7 @@ export function Header({ user }: HeaderProps) {
                   </Link>
                   <button
                     className={cn('btn-ghost w-full justify-start px-4 py-2.5 rounded-none text-red-400 hover:text-red-300 hover:bg-red-500/5')}
-                    onClick={() => signOut({ callbackUrl: '/login' })}
+                    onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
                   >
                     <LogOut className="w-4 h-4" />
                     Sair
