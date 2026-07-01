@@ -78,7 +78,11 @@ export async function POST(req: NextRequest) {
     return { clinic, admin };
   });
 
-  const inviteLink = `${process.env.NEXTAUTH_URL}/set-password/${inviteToken}`;
+  // Use the clinic's own subdomain so the user lands on the right tenant after activation.
+  const domain = process.env.APP_DOMAIN;
+  const inviteLink = domain
+    ? `https://${slug}.${domain}/set-password/${inviteToken}`
+    : `${process.env.NEXTAUTH_URL}/set-password/${inviteToken}`;
   const html = buildInviteEmail(adminName, inviteLink, 'ADMIN');
   await sendEmail({
     to: [{ name: adminName, email: adminEmail }],

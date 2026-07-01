@@ -25,6 +25,11 @@ export async function middleware(req: NextRequest) {
   const host = hostname.split(':')[0];
   const hostParts = host.split('.');
   if (hostParts.length >= 2 && hostParts[0] === 'gestao') {
+    // set-password is tenant-agnostic and must never be rewritten to /super-admin.
+    if (pathname.startsWith('/set-password')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
     // Map pathname → super-admin pathname
     let superPath: string;
     if (pathname === '/') {
