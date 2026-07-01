@@ -5,24 +5,68 @@ import { SUPER_ADMIN_COOKIE } from '@/lib/super-admin-cookie';
 
 const SUPER_ADMIN_PUBLIC_PATHS = ['/super-admin/login', '/api/super-admin/login'];
 
+async function checkSuperAdminSession(req: NextRequest): Promise<boolean> {
+  const cookieToken = req.cookies.get(SUPER_ADMIN_COOKIE)?.value;
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!cookieToken || !secret) return false;
+  const decoded = await decode({ token: cookieToken, secret }).catch(() => null);
+  return !!decoded?.id;
+}
+
 export async function middleware(req: NextRequest) {
-  // 1. Resolve tenant slug from subdomain; fall back to env var for local dev.
   const hostname = req.headers.get('host') ?? '';
-  const slug = slugFromHostname(hostname) ?? process.env.CLINIC_SLUG ?? null;
-
   const requestHeaders = new Headers(req.headers);
-  if (slug) requestHeaders.set(TENANT_HEADER, slug);
-
   const { pathname } = req.nextUrl;
 
-  // 2. Super-admin routes are not tied to any tenant; they have their own session cookie.
+  // 1. gestao.* subdomain → super-admin panel with path rewriting.
+  //    gestao.example.com/         → /super-admin
+  //    gestao.example.com/login    → /super-admin/login
+  //    gestao.example.com/minha-conta → /super-admin/minha-conta
+  const host = hostname.split(':')[0];
+  const hostParts = host.split('.');
+  if (hostParts.length >= 2 && hostParts[0] === 'gestao') {
+    // Map pathname → super-admin pathname
+    let superPath: string;
+    if (pathname === '/') {
+      superPath = '/super-admin';
+    } else if (pathname.startsWith('/super-admin') || pathname.startsWith('/api/super-admin')) {
+      superPath = pathname;
+    } else if (pathname.startsWith('/api/')) {
+      superPath = `/api/super-admin${pathname.slice('/api'.length)}`;
+    } else {
+      superPath = `/super-admin${pathname}`;
+    }
+
+    const isPublic = SUPER_ADMIN_PUBLIC_PATHS.includes(superPath);
+    if (!isPublic) {
+      const authed = await checkSuperAdminSession(req);
+      if (!authed) {
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+        }
+        const loginUrl = req.nextUrl.clone();
+        loginUrl.pathname = '/super-admin/login';
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+
+    if (superPath !== pathname) {
+      const url = req.nextUrl.clone();
+      url.pathname = superPath;
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    }
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // 2. Resolve tenant slug from subdomain; fall back to env var for local dev.
+  const slug = slugFromHostname(hostname) ?? process.env.CLINIC_SLUG ?? null;
+  if (slug) requestHeaders.set(TENANT_HEADER, slug);
+
+  // 3. Super-admin routes via direct path (local dev without gestao subdomain).
   if (pathname.startsWith('/super-admin') || pathname.startsWith('/api/super-admin')) {
     if (!SUPER_ADMIN_PUBLIC_PATHS.includes(pathname)) {
-      const cookieToken = req.cookies.get(SUPER_ADMIN_COOKIE)?.value;
-      const secret = process.env.NEXTAUTH_SECRET;
-      const decoded = cookieToken && secret ? await decode({ token: cookieToken, secret }).catch(() => null) : null;
-
-      if (!decoded?.id) {
+      const authed = await checkSuperAdminSession(req);
+      if (!authed) {
         if (pathname.startsWith('/api/')) {
           return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
         }
@@ -32,12 +76,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // 3. Non-dashboard routes just get the tenant header injected.
+  // 4. Non-dashboard routes just get the tenant header injected.
   if (!pathname.startsWith('/dashboard')) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // 4. Auth check for dashboard routes.
+  // 5. Auth check for dashboard routes.
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token) {
@@ -65,6 +109,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on every route except Next.js internals and static files.
   matcher: ['/((?!_next/static|_next/image|favicon\\.ico).*)'],
 };

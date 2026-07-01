@@ -288,7 +288,7 @@ export default function SuperAdminPage() {
                 required
               />
               <p className="text-xs text-surface-muted mt-1">
-                Será usado como: <span className="font-mono">{newSlug || 'slug'}.agendaaba.com.br</span>
+                Será usado como: <span className="font-mono">{newSlug || 'slug'}.seudominio.com.br</span>
               </p>
             </Field>
             <Field label="Nome do administrador">

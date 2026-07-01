@@ -27,6 +27,16 @@ services:
       postgres:
         condition: service_healthy
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: clinica_aba_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
+
 volumes:
   postgres_data:
     name: clinica_aba_pgdata
