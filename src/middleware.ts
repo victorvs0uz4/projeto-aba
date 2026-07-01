@@ -63,11 +63,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // 2. Resolve tenant slug from subdomain; fall back to env var for local dev.
-  const slug = slugFromHostname(hostname) ?? process.env.CLINIC_SLUG ?? null;
+  // 2. Resolve tenant slug from subdomain.
+  const subdomainSlug = slugFromHostname(hostname);
+
+  // 3. Block /super-admin access from clinic subdomains — only gestao.* is allowed.
+  //    Localhost (subdomainSlug === null) keeps access for local dev.
+  if (subdomainSlug && (pathname.startsWith('/super-admin') || pathname.startsWith('/api/super-admin'))) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
+    }
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  const slug = subdomainSlug ?? process.env.CLINIC_SLUG ?? null;
   if (slug) requestHeaders.set(TENANT_HEADER, slug);
 
-  // 3. Super-admin routes via direct path (local dev without gestao subdomain).
+  // 4. Super-admin routes via direct path (local dev: localhost without gestao subdomain).
   if (pathname.startsWith('/super-admin') || pathname.startsWith('/api/super-admin')) {
     if (!SUPER_ADMIN_PUBLIC_PATHS.includes(pathname)) {
       const authed = await checkSuperAdminSession(req);

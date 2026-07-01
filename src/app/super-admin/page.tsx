@@ -11,6 +11,7 @@ import {
   Loader2,
   X,
   User,
+  LogOut,
 } from 'lucide-react';
 
 type Clinic = {
@@ -57,6 +58,11 @@ export default function SuperAdminPage() {
   const [editCnpj, setEditCnpj] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+
+  async function handleLogout() {
+    await fetch('/api/super-admin/logout', { method: 'POST' });
+    router.push('/login');
+  }
 
   const fetchClinics = useCallback(async () => {
     setLoading(true);
@@ -167,6 +173,12 @@ export default function SuperAdminPage() {
               onClick={() => router.push('/super-admin/minha-conta')}
             >
               <User className="w-4 h-4" /> Minha Conta
+            </button>
+            <button
+              className="btn-secondary flex items-center gap-2 text-red-400 hover:text-red-300"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" /> Sair
             </button>
             <button className="btn-primary flex items-center gap-2" onClick={() => setShowNew(true)}>
               <Plus className="w-4 h-4" /> Nova Clínica
