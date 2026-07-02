@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { Brain, Calendar, Users, UserRound, DoorOpen, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Brain, Calendar, Users, UserRound, DoorOpen, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -11,6 +11,7 @@ type DashboardStats = {
   totalPatients: number;
   totalRooms: number;
   todaySessions: SessionItem[];
+  unconfirmedSessions: SessionItem[];
   monthTotal: number;
   monthDone: number;
   monthCancelled: number;
@@ -92,7 +93,7 @@ async function getDashboardStats(clinicId: string, role: string, userId: string)
   }
 
   // ADMIN
-  const [totalProfessionals, totalPatients, totalRooms, todaySessions, monthTotal, monthDone, monthCancelled] = await Promise.all([
+  const [totalProfessionals, totalPatients, totalRooms, todaySessions, unconfirmedSessions, monthTotal, monthDone, monthCancelled] = await Promise.all([
     prisma.professional.count({ where: { clinicId, active: true } }),
     prisma.patient.count({ where: { clinicId, active: true } }),
     prisma.room.count({ where: { clinicId, active: true } }),
@@ -105,12 +106,23 @@ async function getDashboardStats(clinicId: string, role: string, userId: string)
       },
       orderBy: { startDatetime: 'asc' },
     }),
+    // Atendimentos cuja janela já passou e continuam SCHEDULED — nem confirmados, nem cancelados.
+    prisma.session.findMany({
+      where: { clinicId, status: 'SCHEDULED', endDatetime: { lt: new Date() } },
+      include: {
+        patient: { select: { name: true } },
+        professional: { include: { user: { select: { name: true } } } },
+        room: { select: { name: true } },
+      },
+      orderBy: { startDatetime: 'asc' },
+      take: 20,
+    }),
     prisma.session.count({ where: { clinicId, startDatetime: { gte: monthStart, lte: monthEnd } } }),
     prisma.session.count({ where: { clinicId, status: 'DONE', startDatetime: { gte: monthStart, lte: monthEnd } } }),
     prisma.session.count({ where: { clinicId, status: 'CANCELLED', startDatetime: { gte: monthStart, lte: monthEnd } } }),
   ]);
 
-  return { type: 'admin', totalProfessionals, totalPatients, totalRooms, todaySessions, monthTotal, monthDone, monthCancelled };
+  return { type: 'admin', totalProfessionals, totalPatients, totalRooms, todaySessions, unconfirmedSessions, monthTotal, monthDone, monthCancelled };
 }
 
 export default async function DashboardPage() {
@@ -169,6 +181,45 @@ export default async function DashboardPage() {
           <MiniStat icon={Calendar} color="text-brand-400" label={`Total em ${monthName}`} value={stats.monthTotal ?? 0} />
           <MiniStat icon={CheckCircle} color="text-green-400" label="Realizadas" value={stats.monthDone ?? 0} />
           <MiniStat icon={XCircle} color="text-red-400" label="Canceladas" value={stats.monthCancelled ?? 0} />
+        </div>
+      )}
+
+      {/* Unconfirmed sessions alert — ADMIN only */}
+      {stats?.type === 'admin' && stats.unconfirmedSessions.length > 0 && (
+        <div className="card border-amber-500/30 bg-amber-500/5 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-white">
+                {stats.unconfirmedSessions.length} atendimento{stats.unconfirmedSessions.length !== 1 ? 's' : ''} aguardando confirmação
+              </h2>
+              <p className="text-xs text-surface-muted">O horário já passou e a sessão não foi marcada como realizada ou cancelada.</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {stats.unconfirmedSessions.map((s) => (
+              <div key={s.id} className="flex items-center gap-4 p-3 rounded-lg bg-surface border border-amber-500/20">
+                <div className="w-1 h-10 rounded-full bg-amber-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{s.patient?.name}</p>
+                  <p className="text-xs text-surface-muted mt-0.5">
+                    {s.professional ? `com ${s.professional.user.name}` : ''}
+                    {s.room ? ` · ${s.room.name}` : ''}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-medium text-white">{formatDateTime(s.startDatetime)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Link href="/dashboard/agenda" className="btn-ghost btn-sm mt-4">
+            Resolver na agenda →
+          </Link>
         </div>
       )}
 
