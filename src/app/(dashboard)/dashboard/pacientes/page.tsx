@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, UserRound, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Search, Edit2, Trash2, UserRound, Users, History } from 'lucide-react';
 import { formatDate, getInitials } from '@/lib/utils';
 import { PatientDialog } from '@/components/patients/patient-dialog';
 
@@ -124,6 +125,9 @@ export default function PatientsPage() {
                   </td>
                   <td>
                     <div className="flex items-center gap-2 justify-end">
+                      <Link href={`/dashboard/pacientes/${p.id}`} className="btn-ghost btn-sm" title="Ver histórico de atendimentos">
+                        <History className="w-4 h-4" />
+                      </Link>
                       <button className="btn-ghost btn-sm" onClick={() => { setEditing(p); setDialogOpen(true); }}>
                         <Edit2 className="w-4 h-4" />
                       </button>
