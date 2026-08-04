@@ -160,7 +160,13 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
                   </button>
                   <button
                     className="btn-sm btn-secondary flex items-center gap-2"
-                    onClick={() => setShowCancelChoice(true)}
+                    onClick={() => {
+                      if (canAdmin) {
+                        setShowCancelChoice(true);
+                      } else if (confirm('Cancelar esta sessão? O horário ficará pendente até a administração decidir se realoca o paciente com outro profissional ou cancela definitivamente.')) {
+                        updateStatus('CANCELLED', true);
+                      }
+                    }}
                     disabled={updatingStatus}
                   >
                     <XCircle className="w-4 h-4 text-red-400" /> Cancelar Sessão
