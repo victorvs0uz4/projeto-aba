@@ -25,6 +25,7 @@ enum SessionStatus {
   DONE
   CANCELLED
   RESCHEDULED
+  PENDING_REALLOCATION
 }
 
 enum NotificationType {

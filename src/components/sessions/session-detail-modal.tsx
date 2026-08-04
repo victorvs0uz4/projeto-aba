@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Loader2, Calendar, User, MapPin, Clock, FileText, RefreshCw, XCircle, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { X, Loader2, Calendar, User, MapPin, Clock, FileText, RefreshCw, XCircle, CheckCircle, Users2 } from 'lucide-react';
 import { formatDateTime, getStatusLabel, getStatusColor } from '@/lib/utils';
 import type { CalendarSession } from '@/app/(dashboard)/dashboard/agenda/page';
 
@@ -17,15 +18,20 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
   const [notes, setNotes] = useState(session.resource.notes ?? '');
   const [savingNotes, setSavingNotes] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showCancelChoice, setShowCancelChoice] = useState(false);
 
-  async function updateStatus(status: string) {
+  async function updateStatus(status: string, reallocate = false) {
     if (status === 'DONE' && !notes.trim()) return;
     setUpdatingStatus(true);
     try {
+      const body: Record<string, unknown> = { status };
+      if (status === 'DONE') body.notes = notes;
+      if (status === 'CANCELLED') body.reallocate = reallocate;
+
       const res = await fetch(`/api/sessions/${session.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(status === 'DONE' ? { status, notes } : { status }),
+        body: JSON.stringify(body),
       });
       if (res.ok) { onUpdated(); onClose(); }
     } finally { setUpdatingStatus(false); }
@@ -75,7 +81,11 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
           <DetailRow icon={Clock} label="Horário"
             value={`${formatDateTime(session.start)} — ${new Date(session.end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
           />
-          <DetailRow icon={User} label="Profissional" value={session.resource.professionalName} />
+          <DetailRow
+            icon={User}
+            label={session.resource.status === 'PENDING_REALLOCATION' ? 'Estava com' : 'Profissional'}
+            value={session.resource.professionalName}
+          />
           {session.resource.roomName && (
             <DetailRow icon={MapPin} label="Sala" value={session.resource.roomName} />
           )}
@@ -132,34 +142,66 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
 
           return (
             <div className="pt-2 border-t border-surface-border">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="btn-sm btn-secondary flex items-center gap-2"
-                  onClick={() => updateStatus('DONE')}
-                  disabled={updatingStatus || !canMarkDone || missingNotes}
-                  title={
-                    !canMarkDone
-                      ? 'Apenas sessões do dia atual ou anteriores podem ser confirmadas'
-                      : missingNotes
-                        ? 'Registre uma observação para confirmar o atendimento'
-                        : ''
-                  }
-                >
-                  <CheckCircle className="w-4 h-4 text-green-400" /> Marcar como Realizada
-                </button>
-                <button
-                  className="btn-sm btn-secondary flex items-center gap-2"
-                  onClick={() => updateStatus('CANCELLED')}
-                  disabled={updatingStatus}
-                >
-                  <XCircle className="w-4 h-4 text-red-400" /> Cancelar Sessão
-                </button>
-                {canAdmin && (
-                  <button className="btn-danger btn-sm ml-auto" onClick={deleteSession}>
-                    Excluir
+              {!showCancelChoice ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn-sm btn-secondary flex items-center gap-2"
+                    onClick={() => updateStatus('DONE')}
+                    disabled={updatingStatus || !canMarkDone || missingNotes}
+                    title={
+                      !canMarkDone
+                        ? 'Apenas sessões do dia atual ou anteriores podem ser confirmadas'
+                        : missingNotes
+                          ? 'Registre uma observação para confirmar o atendimento'
+                          : ''
+                    }
+                  >
+                    <CheckCircle className="w-4 h-4 text-green-400" /> Marcar como Realizada
                   </button>
-                )}
-              </div>
+                  <button
+                    className="btn-sm btn-secondary flex items-center gap-2"
+                    onClick={() => setShowCancelChoice(true)}
+                    disabled={updatingStatus}
+                  >
+                    <XCircle className="w-4 h-4 text-red-400" /> Cancelar Sessão
+                  </button>
+                  {canAdmin && (
+                    <button className="btn-danger btn-sm ml-auto" onClick={deleteSession}>
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-300 mb-2">Como deseja cancelar esta sessão?</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="btn-sm btn-secondary flex items-center gap-2"
+                      onClick={() => updateStatus('CANCELLED', false)}
+                      disabled={updatingStatus}
+                    >
+                      <XCircle className="w-4 h-4 text-red-400" /> Apenas cancelar
+                    </button>
+                    <button
+                      className="btn-sm btn-secondary flex items-center gap-2"
+                      onClick={() => updateStatus('CANCELLED', true)}
+                      disabled={updatingStatus}
+                    >
+                      <Users2 className="w-4 h-4 text-amber-400" /> Cancelar e marcar para realocar
+                    </button>
+                    <button
+                      className="btn-ghost btn-sm"
+                      onClick={() => setShowCancelChoice(false)}
+                      disabled={updatingStatus}
+                    >
+                      Voltar
+                    </button>
+                  </div>
+                  <p className="text-xs text-surface-muted mt-2">
+                    &quot;Marcar para realocar&quot; mantém o horário do paciente em aberto na tela Profissionais do Dia, para alocação com outro profissional.
+                  </p>
+                </div>
+              )}
               {!canMarkDone && (
                 <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
@@ -175,6 +217,23 @@ export function SessionDetailModal({ session, onClose, onUpdated, canEdit, canAd
             </div>
           );
         })()}
+
+        {/* Pending reallocation notice */}
+        {session.resource.status === 'PENDING_REALLOCATION' && (
+          <div className="pt-2 border-t border-surface-border">
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+              <Users2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <p>Este horário está aguardando realocação para outro profissional.</p>
+                {canAdmin && (
+                  <Link href="/dashboard/profissionais-do-dia" className="underline font-medium">
+                    Ir para Profissionais do Dia →
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

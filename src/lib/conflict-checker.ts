@@ -26,11 +26,13 @@ interface ConflictResult {
 export async function checkScheduleConflicts(params: ConflictCheckParams): Promise<ConflictResult> {
   const { professionalId, patientId, roomId, startDatetime, endDatetime, excludeSessionId } = params;
 
-  // Query all non-cancelled sessions that overlap with the time window
+  // Query all active sessions that overlap with the time window.
+  // PENDING_REALLOCATION slots don't have a real professional holding the time,
+  // so they don't block new bookings either.
   const overlapping = await prisma.session.findMany({
     where: {
       id: { not: excludeSessionId },
-      status: { notIn: ['CANCELLED'] },
+      status: { notIn: ['CANCELLED', 'PENDING_REALLOCATION'] },
       startDatetime: { lt: endDatetime },
       endDatetime: { gt: startDatetime },
       OR: [

@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (error) return error;
 
   const body = await req.json();
-  const { patientId, professionalId, roomId, startDatetime, endDatetime, status, notes, recurrenceRule } = body;
+  const { patientId, professionalId, roomId, startDatetime, endDatetime, status, notes, recurrenceRule, reallocate } = body;
 
   const existing = await prisma.session.findFirst({
     where: { id: params.id, clinicId: session.user.clinicId },
@@ -100,7 +100,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const prevStatus = existing.status;
   const newStatus = status ?? existing.status;
 
-  if (newStatus !== prevStatus) {
+  // Sessões PENDING_REALLOCATION nunca foram comunicadas como um agendamento real
+  // (ninguém recebeu e-mail sobre elas), então sair desse status não deve notificar.
+  if (newStatus !== prevStatus && prevStatus !== 'PENDING_REALLOCATION') {
     const guardianEmails = existing.patient.guardians.map(g => ({ name: g.user.name, email: g.user.email }));
     const professionalEmail = { name: existing.professional.user.name, email: existing.professional.user.email };
     const allRecipients = [professionalEmail, ...guardianEmails];
@@ -142,6 +144,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             recipients, subject: `Sessão Cancelada — ${updated.patient.name}`, body: html,
           },
         });
+      }
+
+      // Mantém o horário do paciente em aberto para ser realocado com outro
+      // profissional na tela "Profissionais do Dia", em vez de simplesmente cancelar.
+      if (reallocate) {
+        const pending = await prisma.session.create({
+          data: {
+            patientId: existing.patientId,
+            professionalId: existing.professionalId,
+            roomId: null,
+            startDatetime: existing.startDatetime,
+            endDatetime: existing.endDatetime,
+            clinicId: existing.clinicId,
+            status: 'PENDING_REALLOCATION',
+          },
+        });
+        return ok({ ...updated, pendingSessionId: pending.id });
       }
     } else if (newStatus === 'RESCHEDULED') {
       const sessionInfo = {

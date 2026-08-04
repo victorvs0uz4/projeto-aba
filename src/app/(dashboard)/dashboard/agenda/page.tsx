@@ -194,6 +194,7 @@ export default function AgendaPage() {
           { status: 'DONE', label: 'Realizada' },
           { status: 'CANCELLED', label: 'Cancelada' },
           { status: 'RESCHEDULED', label: 'Remarcada' },
+          { status: 'PENDING_REALLOCATION', label: 'Pendente de Realocação' },
         ].map(({ status, label }) => (
           <div key={status} className="flex items-center gap-2 text-xs text-gray-400">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getStatusColor(status) }} />

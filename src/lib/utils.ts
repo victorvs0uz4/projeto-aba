@@ -41,6 +41,7 @@ export function getStatusColor(status: string): string {
     DONE: '#22c55e',
     CANCELLED: '#ef4444',
     RESCHEDULED: '#f59e0b',
+    PENDING_REALLOCATION: '#a855f7',
   };
   return colors[status] ?? '#6b7280';
 }
@@ -51,6 +52,7 @@ export function getStatusLabel(status: string): string {
     DONE: 'Realizada',
     CANCELLED: 'Cancelada',
     RESCHEDULED: 'Remarcada',
+    PENDING_REALLOCATION: 'Pendente de Realocação',
   };
   return labels[status] ?? status;
 }

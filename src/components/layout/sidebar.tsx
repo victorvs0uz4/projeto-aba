@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  CalendarClock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -25,6 +26,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Brain, roles: ['ADMIN', 'PROFESSIONAL', 'GUARDIAN'] },
   { href: '/dashboard/agenda', label: 'Agenda', icon: Calendar, roles: ['ADMIN', 'PROFESSIONAL', 'GUARDIAN'] },
+  { href: '/dashboard/profissionais-do-dia', label: 'Profissionais do Dia', icon: CalendarClock, roles: ['ADMIN'] },
   { href: '/dashboard/profissionais', label: 'Profissionais', icon: Users, roles: ['ADMIN'] },
   { href: '/dashboard/pacientes', label: 'Pacientes', icon: UserRound, roles: ['ADMIN'] },
   { href: '/dashboard/salas', label: 'Salas', icon: DoorOpen, roles: ['ADMIN'] },
